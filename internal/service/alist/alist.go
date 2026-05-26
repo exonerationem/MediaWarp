@@ -7,8 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -24,7 +22,7 @@ type alistToken struct {
 	mutex    sync.RWMutex // 令牌锁
 }
 type Client struct {
-	endpoint *url.URL // 服务器入口 URL
+	baseURL  *url.URL // 服务器入口 URL
 	username string   // 用户名
 	password string   // 密码
 
@@ -46,7 +44,7 @@ func New(addr string, username string, password string, token *string) (*Client,
 	}
 
 	client := Client{
-		endpoint: endpoint,
+		baseURL:  endpoint,
 		username: username,
 		password: password,
 		client:   utils.GetHTTPClient(),
@@ -78,9 +76,9 @@ func New(addr string, username string, password string, token *string) (*Client,
 
 // 得到服务器入口
 //
-// 避免直接访问 endpoint 字段
-func (client *Client) GetEndpoint() string {
-	return client.endpoint.String()
+// 避免直接访问 baseURL 字段字符串
+func (client *Client) GetBaseURLString() string {
+	return client.baseURL.String()
 }
 
 // 得到用户名
@@ -98,10 +96,7 @@ func (client *Client) GetUserInfo() UserInfoData {
 //
 // 生成格式：<endpoint>/d/<base_path>/<file_path>?sign=<sign>
 func (client *Client) BuildFileDownloadURL(filePath string, sign string) string {
-	endpointURL := *client.endpoint // 复制一份 URL 对象，避免修改原对象
-	cleanBasePath := strings.TrimPrefix(client.userInfo.BasePath, "/")
-	cleanFilePath := strings.TrimPrefix(filePath, "/")
-	endpointURL.Path = path.Join(endpointURL.Path, "d", cleanBasePath, cleanFilePath)
+	endpointURL := client.baseURL.JoinPath("d", client.userInfo.BasePath, filePath)
 	query := endpointURL.Query()
 	query.Del("sign")
 	if sign != "" {
@@ -150,7 +145,7 @@ func doRequest[T any](client *Client, r Request) (*T, error) {
 		}
 	}
 
-	req := newHTTPReq(client.GetEndpoint(), r)
+	req := newHTTPReq(client.GetBaseURLString(), r)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	if r.NeedAuth() {

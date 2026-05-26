@@ -32,7 +32,7 @@ func registerAlistClient(addr string, username string, password string, token *s
 		logging.Warningf("注册 Alist 客户端 %s 失败：%s", addr, err)
 		return
 	}
-	alistClientMap.Store(c.GetEndpoint(), c)
+	alistClientMap.Store(c.GetBaseURLString(), c)
 }
 
 // 获取Alist客户端
