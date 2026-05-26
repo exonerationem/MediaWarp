@@ -2,6 +2,8 @@ module github.com/AkimioJR/MediaWarp
 
 go 1.26.1
 
+toolchain go1.26.3
+
 require (
 	github.com/allegro/bigcache/v3 v3.1.0
 	github.com/gin-gonic/gin v1.12.0
