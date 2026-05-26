@@ -1,11 +1,12 @@
-FROM golang:1.24 AS builder
+FROM golang:1.26 AS builder
 
 ARG APP_VERSION=dev
 ARG COMMIT_HASH=unknown
 ARG BUILD_DATE=unknown
 
 ENV GO111MODULE=on \
-    GOTOOLCHAIN=auto
+    GOTOOLCHAIN=auto \
+    CGO_ENABLED=0
 
 WORKDIR /builder
 COPY . .
