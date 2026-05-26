@@ -44,7 +44,7 @@ func New(addr string, username string, password string, token *string) (*Client,
 	if endpoint.Scheme == "" {
 		endpoint.Scheme = "http"
 	}
-	endpoint.Path = ""
+
 	client := Client{
 		endpoint: endpoint,
 		username: username,
