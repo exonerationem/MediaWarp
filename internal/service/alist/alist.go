@@ -145,7 +145,7 @@ func doRequest[T any](client *Client, r Request) (*T, error) {
 		}
 	}
 
-	req := newHTTPReq(client.GetBaseURLString(), r)
+	req := newHTTPReq(r, client.baseURL)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	if r.NeedAuth() {
@@ -173,7 +173,7 @@ func doRequest[T any](client *Client, r Request) (*T, error) {
 	}
 
 	if resp.Code != http.StatusOK {
-		return nil, fmt.Errorf("请求失败，HTTP 状态码: %d, 响应状态码: %d, 响应信息: %s", res.StatusCode, resp.Code, resp.Message)
+		return nil, fmt.Errorf("请求失败, HTTP 状态码: %d, 响应状态码: %d, 响应信息: %s", res.StatusCode, resp.Code, resp.Message)
 	}
 
 	if cacheKey != "" && client.cache != nil {

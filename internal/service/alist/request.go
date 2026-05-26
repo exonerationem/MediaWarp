@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -24,16 +25,20 @@ func getReqBody(r Request) io.Reader {
 	return bytes.NewBuffer(b)
 }
 
-func newHTTPReq(endpoint string, r Request) *http.Request {
-	var (
-		req *http.Request
-		err error
-	)
+func newHTTPReq(r Request, baseURL *url.URL) *http.Request {
+	var body io.Reader
 	if r.GetMethod() == http.MethodGet {
-		req, err = http.NewRequest(r.GetMethod(), endpoint+r.GetAPIPath(), nil)
+		body = nil
 	} else {
-		req, err = http.NewRequest(r.GetMethod(), endpoint+r.GetAPIPath(), getReqBody(r))
+		body = getReqBody(r)
 	}
+
+	req, err := http.NewRequest(
+		r.GetMethod(),
+		baseURL.JoinPath(r.GetAPIPath()).String(),
+		body,
+	)
+
 	if err != nil {
 		panic(fmt.Errorf("创建请求失败: %w", err))
 	}
