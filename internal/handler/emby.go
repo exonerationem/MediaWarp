@@ -42,8 +42,12 @@ type EmbyHandler struct {
 // 初始化
 func NewEmbyServerHandler(addr string, apiKey string) (*EmbyHandler, error) {
 	var handler = EmbyHandler{}
-	handler.client = emby.New(addr, apiKey)
-	target, err := url.Parse(handler.client.GetEndpoint())
+	client, err := emby.New(addr, apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("创建 Emby 客户端实例失败: %w", err)
+	}
+	handler.client = client
+	target, err := url.Parse(handler.client.GetBaseURLString())
 	if err != nil {
 		return nil, err
 	}

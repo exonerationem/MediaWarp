@@ -35,8 +35,12 @@ type JellyfinHandler struct {
 
 func NewJellyfinHandler(addr string, apiKey string) (*JellyfinHandler, error) {
 	handler := JellyfinHandler{}
-	handler.client = jellyfin.New(addr, apiKey)
-	target, err := url.Parse(handler.client.GetEndpoint())
+	client, err := jellyfin.New(addr, apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("创建 Jellyfin 客户端实例失败: %w", err)
+	}
+	handler.client = client
+	target, err := url.Parse(handler.client.GetBaseURLString())
 	if err != nil {
 		return nil, err
 	}
