@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"strconv"
 
@@ -14,6 +15,7 @@ import (
 type Client struct {
 	baseURL *url.URL
 	apiKey  string // 认证方式：APIKey；获取方式：Emby控制台 -> 高级 -> API密钥
+	client  *http.Client
 }
 
 // 获取媒体服务器类型
@@ -46,9 +48,9 @@ func (client *Client) ItemsServiceQueryItem(ids string, limit int, fields string
 	params.Add("Fields", fields)
 	params.Add("Recursive", "true")
 	params.Add("api_key", client.GetAPIKey())
-	api := client.baseURL.JoinPath("/Items")
+	api := client.baseURL.JoinPath("Items")
 	api.RawQuery = params.Encode()
-	resp, err := utils.GetHTTPClient().Get(api.String())
+	resp, err := client.client.Get(api.String())
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +70,7 @@ func (client *Client) ItemsServiceQueryItem(ids string, limit int, fields string
 
 // 获取index.html内容 API：/web/index.html
 func (client *Client) GetIndexHtml() ([]byte, error) {
-	resp, err := utils.GetHTTPClient().Get(client.baseURL.JoinPath("/web/index.html").String())
+	resp, err := utils.GetHTTPClient().Get(client.baseURL.JoinPath("web/index.html").String())
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +92,7 @@ func New(baseURL string, apiKey string) (*Client, error) {
 	client := &Client{
 		baseURL: parsedURL,
 		apiKey:  apiKey,
+		client:  utils.GetHTTPClient(),
 	}
 	return client, nil
 }
