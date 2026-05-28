@@ -330,7 +330,8 @@ func (handler *EmbyHandler) ModifyIndex(rw *http.Response) error {
 	}
 
 	if config.Web.Head != "" { // 用户自定义HEAD
-		addHEAD.WriteString(config.Web.Head + "\n")
+		addHEAD.WriteString(config.Web.Head)
+		addHEAD.WriteByte('\n')
 	}
 	if config.Web.ExternalPlayerUrl { // 外部播放器
 		addHEAD.WriteString(`<script src="/MediaWarp/static/embyExternalUrl/embyWebAddExternalUrl/embyLaunchPotplayer.js"></script>` + "\n")
@@ -340,7 +341,8 @@ func (handler *EmbyHandler) ModifyIndex(rw *http.Response) error {
     <script src="/MediaWarp/static/emby-crx/static/js/common-utils.js"></script>
     <script src="/MediaWarp/static/emby-crx/static/js/jquery-3.6.0.min.js"></script>
     <script src="/MediaWarp/static/emby-crx/static/js/md5.min.js"></script>
-    <script src="/MediaWarp/static/emby-crx/content/main.js"></script>` + "\n")
+    <script src="/MediaWarp/static/emby-crx/content/main.js"></script>`)
+		addHEAD.WriteByte('\n')
 	}
 	if config.Web.ActorPlus { // 过滤没有头像的演员和制作人员
 		addHEAD.WriteString(`<script src="/MediaWarp/static/emby-web-mod/actorPlus/actorPlus.js"></script>` + "\n")
