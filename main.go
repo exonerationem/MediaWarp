@@ -35,7 +35,7 @@ func init() {
 	flag.StringVar(&configPath, "config", "config/config.yaml", "指定配置文件路径")
 	flag.Parse()
 
-	fmt.Print(constants.LOGO)
+	fmt.Println(constants.LOGO)
 	fmt.Println(utils.Center(fmt.Sprintf(" MediaWarp %s ", config.Version().AppVersion), 71, "="))
 }
 
