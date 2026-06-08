@@ -134,3 +134,11 @@
   - 重构 Alist 模块相关代码
   - 更新 Go 版本和依赖版本以及使用更新的语法表达
   - 禁止 HTTPStrm 模式下 proxy 时移除修改 SupportsDirectStream 为 false 的行为，提高兼容性
+- 2026.6.8: v0.2.4
+  - 修复基础路径不为空时 Emby/Jellyfin/Alist 客户端初始化和请求 URL 拼接异常问题
+  - 重构 Emby、Jellyfin、Alist 客户端请求地址构建逻辑，使用 url.URL/JoinPath 生成请求地址并复用全局 HTTP Client
+  - 修复示例配置中字幕转换配置键名，将 art2ass 更正为 srt2ass
+  - 优化图片缓存中间件判断逻辑和页面 HEAD 注入逻辑，减少不必要的处理和内存分配
+  - 使用嵌入文件方式处理启动 Logo，避免 Logo 字符串首尾空白
+  - 升级 Go 版本至 1.26 并更新依赖项和静态资源子模块
+  - 重构 CI、GoReleaser 和 Docker 构建流程，支持构建参数注入版本信息、新增 linux/riscv64 镜像并同步 README 到 Docker Hub
