@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  metadata:
+    name: Prepare Metadata
+    runs-on: ubuntu-latest
+    outputs:
+      build_date: ${{ steps.meta.outputs.build_date }}
+    steps:
+      - name: Prepare release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${GITHUB_OUTPUT}"
+
+  build-binary:
+    needs: metadata
+    uses: ./.github/workflows/build-binary.yaml
+    with:
+      version: ${{ github.ref_name }}
+      commit_hash: ${{ github.sha }}
+      build_date: ${{ needs.metadata.outputs.build_date }}
+
+  build-docker:
+    needs: build-binary
+    uses: ./.github/workflows/build-docker.yaml
+    with:
+      push: true
+      tags: |
+        type=ref,event=tag
+        type=raw,value=latest
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  github-release:
+    name: Create GitHub Release
+    needs: [build-binary, build-docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: MediaWarp_*
+          path: dist/input
+
+      - name: Package release files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          input_dir="${GITHUB_WORKSPACE}/dist/input"
+          output_dir="${GITHUB_WORKSPACE}/dist/release"
+          mkdir -p "${output_dir}"
+
+          for artifact_dir in "${input_dir}"/MediaWarp_*; do
+            [[ -d "${artifact_dir}" ]] || continue
+
+            target="${artifact_dir##*/MediaWarp_}"
+            package_dir="${GITHUB_WORKSPACE}/dist/package/${target}"
+            mkdir -p "${package_dir}"
+
+            shopt -s nullglob
+            bins=("${artifact_dir}"/*)
+            shopt -u nullglob
+
+            if (( ${#bins[@]} != 1 )); then
+              echo "Expected exactly one binary in ${artifact_dir}, found ${#bins[@]}" >&2
+              exit 1
+            fi
+
+            bin_path="${bins[0]}"
+            bin_name="$(basename "${bin_path}")"
+
+            cp "${bin_path}" "${package_dir}/${bin_name}"
+            cp LICENSE "${package_dir}/LICENSE"
+            cp README.md "${package_dir}/README.md"
+            cp config/config.yaml.example "${package_dir}/config.yaml.example"
+
+            pushd "${package_dir}" > /dev/null
+
+            if [[ "${bin_name}" == *.exe ]]; then
+              zip -r "${output_dir}/MediaWarp_${{ github.ref_name }}_${target}.zip" "${bin_name}" LICENSE README.md config.yaml.example
+            else
+              chmod +x "${bin_name}"
+              tar czf "${output_dir}/MediaWarp_${{ github.ref_name }}_${target}.tar.gz" "${bin_name}" LICENSE README.md config.yaml.example
+            fi
+
+            popd > /dev/null
+          done
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            dist/release/MediaWarp_*

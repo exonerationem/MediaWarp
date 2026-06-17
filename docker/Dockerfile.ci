@@ -1,9 +1,9 @@
 FROM alpine:latest
 
 ARG TARGETPLATFORM
-COPY $TARGETPLATFORM/MediaWarp ./MediaWarp
+COPY targets/$TARGETPLATFORM/MediaWarp /MediaWarp
 
-RUN chmod +x ./MediaWarp
+RUN chmod +x /MediaWarp
 
 EXPOSE 9000
 VOLUME ["/etc/localtime", "/etc/timezone", "/config", "/logs", "/custom"]
