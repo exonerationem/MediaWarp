@@ -21,6 +21,7 @@ func ImageCache(ttl time.Duration, reg *regexp.Regexp) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if ctx.Request.Method == http.MethodGet && reg.MatchString(ctx.Request.URL.Path) {
 			cacheFunc(ctx)
+			return
 		}
 		ctx.Next()
 	}
