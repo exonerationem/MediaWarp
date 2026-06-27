@@ -233,10 +233,16 @@ func (handler *EmbyHandler) VideosHandler(ctx *gin.Context) {
 		return
 	}
 
+	if len(itemResponse.Items) == 0 {
+		logging.Warningf("ItemsServiceQueryItem 返回空结果，mediaSourceID: %s", mediaSourceID)
+		handler.ReverseProxy(ctx.Writer, ctx.Request)
+		return
+	}
+
 	item := itemResponse.Items[0]
 
-	if !strings.HasSuffix(strings.ToLower(*item.Path), ".strm") { // 不是 Strm 文件
-		logging.Debug("播放本地视频：" + *item.Path + "，不进行处理")
+	if item.Path == nil || !strings.HasSuffix(strings.ToLower(*item.Path), ".strm") { // 不是 Strm 文件
+		logging.Debug("播放本地视频，不进行处理")
 		handler.ReverseProxy(ctx.Writer, ctx.Request)
 		return
 	}
@@ -244,12 +250,21 @@ func (handler *EmbyHandler) VideosHandler(ctx *gin.Context) {
 	strmFileType, opt := recgonizeStrmFileType(*item.Path)
 
 	for _, mediasource := range item.MediaSources {
+		if mediasource.ID == nil {
+			logging.Debugf("跳过 ID 为空的 MediaSource, mediaSourceID: %s", mediaSourceID)
+			continue
+		}
 		logging.Debugf("mediasource.ID: %s ; mediaSourceID: %s ; mediaSourceID_without_prefix: %s", *mediasource.ID, mediaSourceID, mediaSourceID_without_prefix)
 		// EmbyServer >= 4.9 返回的ID带有前缀mediasource_
 		if strings.Replace(*mediasource.ID, "mediasource_", "", 1) == mediaSourceID_without_prefix {
+			if mediasource.Path == nil {
+				logging.Warningf("MediaSource (ID: %s) 的 Path 为空", *mediasource.ID)
+				handler.ReverseProxy(ctx.Writer, ctx.Request)
+				return
+			}
 			switch strmFileType {
 			case constants.HTTPStrm:
-				if *mediasource.Protocol == emby.HTTP {
+				if mediasource.Protocol != nil && *mediasource.Protocol == emby.HTTP {
 					ctx.Redirect(http.StatusFound, handler.httpStrmHandler(*mediasource.Path, ctx.Request.UserAgent()))
 					return
 				}

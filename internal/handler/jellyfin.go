@@ -127,6 +127,10 @@ func (handler *JellyfinHandler) ModifyPlaybackInfo(rw *http.Response) error {
 	}
 
 	for index, mediasource := range playbackInfoResponse.MediaSources {
+		if mediasource.ID == nil {
+			logging.Debugf("跳过 ID 为空的 MediaSource, index: %d", index)
+			continue
+		}
 		startTime := time.Now()
 		logging.Debug("请求 ItemsServiceQueryItem：" + *mediasource.ID)
 		itemResponse, err := handler.client.ItemsServiceQueryItem(*mediasource.ID, 1, "Path,MediaSources") // 查询 item 需要去除前缀仅保留数字部分
@@ -134,7 +138,15 @@ func (handler *JellyfinHandler) ModifyPlaybackInfo(rw *http.Response) error {
 			logging.Warning("请求 ItemsServiceQueryItem 失败：", err)
 			continue
 		}
+		if len(itemResponse.Items) == 0 {
+			logging.Warningf("ItemsServiceQueryItem 返回空结果，MediaSource ID: %s", *mediasource.ID)
+			continue
+		}
 		item := itemResponse.Items[0]
+		if item.Path == nil {
+			logging.Warningf("Item 的 Path 为空，MediaSource ID: %s", *mediasource.ID)
+			continue
+		}
 		strmFileType, opt := recgonizeStrmFileType(*item.Path)
 		bsePath := "MediaSources." + strconv.Itoa(index) + "."
 		switch strmFileType {
@@ -194,20 +206,34 @@ func (handler *JellyfinHandler) VideosHandler(ctx *gin.Context) {
 		return
 	}
 
+	if len(itemResponse.Items) == 0 {
+		logging.Warningf("ItemsServiceQueryItem 返回空结果，mediaSourceID: %s", mediaSourceID)
+		handler.proxy.ServeHTTP(ctx.Writer, ctx.Request)
+		return
+	}
+
 	item := itemResponse.Items[0]
 
-	if !strings.HasSuffix(strings.ToLower(*item.Path), ".strm") { // 不是 Strm 文件
-		logging.Debugf("播放本地视频：%s，不进行处理", *item.Path)
+	if item.Path == nil || !strings.HasSuffix(strings.ToLower(*item.Path), ".strm") { // 不是 Strm 文件
+		logging.Debugf("播放本地视频，不进行处理")
 		handler.proxy.ServeHTTP(ctx.Writer, ctx.Request)
 		return
 	}
 
 	strmFileType, opt := recgonizeStrmFileType(*item.Path)
 	for _, mediasource := range item.MediaSources {
+		if mediasource.ID == nil {
+			continue
+		}
 		if *mediasource.ID == mediaSourceID { // EmbyServer >= 4.9 返回的ID带有前缀mediasource_
+			if mediasource.Path == nil {
+				logging.Warningf("MediaSource (ID: %s) 的 Path 为空", *mediasource.ID)
+				handler.ReverseProxy(ctx.Writer, ctx.Request)
+				return
+			}
 			switch strmFileType {
 			case constants.HTTPStrm:
-				if *mediasource.Protocol == jellyfin.HTTP {
+				if mediasource.Protocol != nil && *mediasource.Protocol == jellyfin.HTTP {
 					ctx.Redirect(http.StatusFound, handler.httpStrmHandler(*mediasource.Path, ctx.Request.UserAgent()))
 					return
 				}
